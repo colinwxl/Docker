@@ -701,17 +701,17 @@ Started machines may have new IP addresses. You may need to re-run the `docker-m
 ### Introduction
 In part 4, you learned how to set up a swarm, which is a cluster of machines running Docker, and deployed an application to it, with containers running in concert on multiple machines.
 
-Here in part 5, you’ll reach the top of the hierarchy of distributed applications: the stack. A stack is a group of interrelated services that share dependencies, and can be orchestrated and scaled together. A single stack is capable of defining and coordinating the functionality of an entire application (though very complex applications may want to use multiple stacks).
+Here in part 5, you’ll reach the top of the hierarchy of distributed applications: the **stack**. A stack is a group of interrelated services that share dependencies, and can be orchestrated and scaled together. A single stack is capable of defining and coordinating the functionality of an entire application (though very complex applications may want to use multiple stacks).
 
-Some good news is, you have technically been working with stacks since part 3, when you created a Compose file and used docker stack deploy. But that was a single service stack running on a single host, which is not usually what takes place in production. Here, you will take what you’ve learned, make multiple services relate to each other, and run them on multiple machines.
+Some good news is, you have technically been working with stacks since part 3, when you created a Compose file and used `docker stack deploy`. But that was a single service stack running on a single host, which is not usually what takes place in production. Here, you will take what you’ve learned, make multiple services relate to each other, and run them on multiple machines.
 
 You’re doing great, this is the home stretch!
 
-Add a new service and redeploy
-It’s easy to add services to our docker-compose.yml file. First, let’s add a free visualizer service that lets us look at how our swarm is scheduling containers.
+### Add a new service and redeploy
+It’s easy to add services to our `docker-compose.yml` file. First, let’s add a free visualizer service that lets us look at how our swarm is scheduling containers.
 
-Open up docker-compose.yml in an editor and replace its contents with the following. Be sure to replace username/repo:tag with your image details.
-
+1. Open up `docker-compose.yml` in an editor and replace its contents with the following. Be sure to replace `username/repo:tag` with your image details.
+```
 version: "3"
 services:
   web:
@@ -742,43 +742,48 @@ services:
       - webnet
 networks:
   webnet:
-The only thing new here is the peer service to web, named visualizer. You’ll see two new things here: a volumes key, giving the visualizer access to the host’s socket file for Docker, and a placement key, ensuring that this service only ever runs on a swarm manager – never a worker. That’s because this container, built from an open source project created by Docker, displays Docker services running on a swarm in a diagram.
-
+```
+The only thing new here is the peer service to `web`, named `visualizer`. You’ll see two new things here: a `volumes` key, giving the visualizer access to the host’s socket file for Docker, and a `placement` key, ensuring that this service only ever runs on a swarm manager – never a worker. That’s because this container, built from [an open source project created by Docker](https://github.com/ManoMarks/docker-swarm-visualizer), displays Docker services running on a swarm in a diagram.
 We’ll talk more about placement constraints and volumes in a moment.
 
-Make sure your shell is configured to talk to myvm1 (full examples are here).
+2. Make sure your shell is configured to talk to `myvm1` (full examples are [here](https://docs.docker.com/get-started/part4/#configure-a-docker-machine-shell-to-the-swarm-manager)).
 
-Run docker-machine ls to list machines and make sure you are connected to myvm1, as indicated by an asterisk next it.
+	- Run `docker-machine ls` to list machines and make sure you are connected to myvm1, as indicated by an asterisk next it.
 
-If needed, re-run docker-machine env myvm1, then run the given command to configure the shell.
+	- If needed, re-run `docker-machine env myvm1`, then run the given command to configure the shell.
 
-On Mac or Linux the command is:
+	On **Mac or Linux** the command is:
+	```
+	eval $(docker-machine env myvm1)
+	```
+	On **Windows** the command is:
+	```
+	& "C:\Program Files\Docker\Docker\Resources\bin\docker-machine.exe" env myvm1 | Invoke-Expression
+	```
 
-eval $(docker-machine env myvm1)
-On Windows the command is:
-
-& "C:\Program Files\Docker\Docker\Resources\bin\docker-machine.exe" env myvm1 | Invoke-Expression
-Re-run the docker stack deploy command on the manager, and whatever services need updating will be updated:
-
+3. Re-run the `docker stack deploy` command on the manager, and whatever services need updating will be updated:
+```
 $ docker stack deploy -c docker-compose.yml getstartedlab
 Updating service getstartedlab_web (id: angi1bf5e4to03qu9f93trnxm)
 Creating service getstartedlab_visualizer (id: l9mnwkeq2jiononb5ihz9u7a4)
-Take a look at the visualizer.
+```
 
-You saw in the Compose file that visualizer runs on port 8080. Get the IP address of one of your nodes by running docker-machine ls. Go to either IP address at port 8080 and you will see the visualizer running:
+4. Take a look at the visualizer.
+You saw in the Compose file that `visualizer` runs on port 8080. Get the IP address of one of your nodes by running `docker-machine ls`. Go to either IP address at port 8080 and you will see the visualizer running:
 
-Visualizer screenshot
+![get-started-visualizer1](https://i.imgur.com/vxysZy1.png)
 
-The single copy of visualizer is running on the manager as you expect, and the 5 instances of web are spread out across the swarm. You can corroborate this visualization by running docker stack ps <stack>:
-
+The single copy of `visualizer` is running on the manager as you expect, and the 5 instances of web are spread out across the swarm. You can corroborate this visualization by running `docker stack ps <stack>`:
+```
 docker stack ps getstartedlab
+```
 The visualizer is a standalone service that can run in any app that includes it in the stack. It doesn’t depend on anything else. Now let’s create a service that does have a dependency: the Redis service that will provide a visitor counter.
 
-Persist the data
+### Persist the data
 Let’s go through the same workflow once more to add a Redis database for storing app data.
 
-Save this new docker-compose.yml file, which finally adds a Redis service. Be sure to replace username/repo:tag with your image details.
-
+1. Save this new `docker-compose.yml file`, which finally adds a Redis service. Be sure to replace `username/repo:tag` with your image details.
+```
 version: "3"
 services:
   web:
@@ -821,52 +826,238 @@ services:
       - webnet
 networks:
   webnet:
-Redis has an official image in the Docker library and has been granted the short image name of just redis, so no username/repo notation here. The Redis port, 6379, has been pre-configured by Redis to be exposed from the container to the host, and here in our Compose file we expose it from the host to the world, so you can actually enter the IP for any of your nodes into Redis Desktop Manager and manage this Redis instance, if you so choose.
+```
+Redis has an official image in the Docker library and has been granted the short `image` name of just `redis`, so no `username/repo` notation here. The Redis port, 6379, has been pre-configured by Redis to be exposed from the container to the host, and here in our Compose file we expose it from the host to the world, so you can actually enter the IP for any of your nodes into Redis Desktop Manager and manage this Redis instance, if you so choose.
 
-Most importantly, there are a couple of things in the redis specification that make data persist between deployments of this stack:
+ Most importantly, there are a couple of things in the `redis` specification that make data persist between deployments of this stack:
 
-redis always runs on the manager, so it’s always using the same filesystem.
-redis accesses an arbitrary directory in the host’s file system as /data inside the container, which is where Redis stores data.
-Together, this is creating a “source of truth” in your host’s physical filesystem for the Redis data. Without this, Redis would store its data in /data inside the container’s filesystem, which would get wiped out if that container were ever redeployed.
+	- `redis` always runs on the manager, so it’s always using the same filesystem.
+	- `redis` accesses an arbitrary directory in the host’s file system as `/data` inside the container, which is where Redis stores data.
+ 
+ Together, this is creating a “source of truth” in your host’s physical filesystem for the Redis data. Without this, Redis would store its data in `/data` inside the container’s filesystem, which would get wiped out if that container were ever redeployed.
 
-This source of truth has two components:
+ This source of truth has two components:
 
-The placement constraint you put on the Redis service, ensuring that it always uses the same host.
-The volume you created that lets the container access ./data (on the host) as /data (inside the Redis container). While containers come and go, the files stored on ./data on the specified host will persist, enabling continuity.
-You are ready to deploy your new Redis-using stack.
+	- The placement constraint you put on the Redis service, ensuring that it always uses the same host.
+	- The volume you created that lets the container access ./data (on the host) as /data (inside the Redis container). While containers come and go, the files stored on ./data on the specified host will persist, enabling continuity.
 
-Create a ./data directory on the manager:
+ You are ready to deploy your new Redis-using stack.
 
+2. Create a `./data` directory on the manager:
+```
 docker-machine ssh myvm1 "mkdir ./data"
-Make sure your shell is configured to talk to myvm1 (full examples are here).
+```
 
-Run docker-machine ls to list machines and make sure you are connected to myvm1, as indicated by an asterisk next it.
+3. Make sure your shell is configured to talk to `myvm1` (full examples are [here](https://docs.docker.com/get-started/part4/#configure-a-docker-machine-shell-to-the-swarm-manager)).
 
-If needed, re-run docker-machine env myvm1, then run the given command to configure the shell.
+	- Run `docker-machine ls` to list machines and make sure you are connected to myvm1, as indicated by an asterisk next it.
 
-On Mac or Linux the command is:
+	- If needed, re-run `docker-machine env myvm1`, then run the given command to configure the shell.
 
-eval $(docker-machine env myvm1)
-On Windows the command is:
+	On **Mac or Linux** the command is:
+	```
+	eval $(docker-machine env myvm1)
+	```
+	On **Windows** the command is:
+	```
+	& "C:\Program Files\Docker\Docker\Resources\bin\docker-machine.exe" env myvm1 | Invoke-Expression
+	```
 
-& "C:\Program Files\Docker\Docker\Resources\bin\docker-machine.exe" env myvm1 | Invoke-Expression
-Run docker stack deploy one more time.
-
+4. Run `docker stack deploy` one more time.
+```
 $ docker stack deploy -c docker-compose.yml getstartedlab
-Run docker service ls to verify that the three services are running as expected.
+```
 
+5. Run `docker service ls` to verify that the three services are running as expected.
+```
 $ docker service ls
 ID                  NAME                       MODE                REPLICAS            IMAGE                             PORTS
 x7uij6xb4foj        getstartedlab_redis        replicated          1/1                 redis:latest                      *:6379->6379/tcp
 n5rvhm52ykq7        getstartedlab_visualizer   replicated          1/1                 dockersamples/visualizer:stable   *:8080->8080/tcp
 mifd433bti1d        getstartedlab_web          replicated          5/5                 orangesnap/getstarted:latest    *:80->80/tcp
+```
 
-Check the web page at one of your nodes (e.g. http://192.168.99.101) and you’ll see the results of the visitor counter, which is now live and storing information on Redis.
+6. Check the web page at one of your nodes (e.g. `http://192.168.99.101`) and you’ll see the results of the visitor counter, which is now live and storing information on Redis.
+![app-in-browser-redis](https://i.imgur.com/BpzU4Uj.png)
 
-Hello World in browser with Redis
+ Also, check the visualizer at port 8080 on either node’s IP address, and you’ll see the `redis` service running along with the `web` and `visualizer` services.
 
-Also, check the visualizer at port 8080 on either node’s IP address, and you’ll see the redis service running along with the web and visualizer services.
+![visualizer-with-redis](https://i.imgur.com/gbnBlCj.png)
 
-Visualizer with redis screenshot
+## Part 6: Deploy your app
+### Introduction
+You’ve been editing the same Compose file for this entire tutorial. Well, we have good news. That Compose file works just as well in production as it does on your machine. Here, we’ll go through some options for running your Dockerized application.
 
-On to Part 6 »
+### Choose an option
+#### Docker CE (Cloud provider)
+If you’re okay with using Docker Community Edition in production, you can use Docker Cloud to help manage your app on popular service providers such as Amazon Web Services, DigitalOcean, and Microsoft Azure.
+
+To set up and deploy:
+- Connect Docker Cloud with your preferred provider, granting Docker Cloud permission to automatically provision and “Dockerize” VMs for you.
+- Use Docker Cloud to create your computing resources and create your swarm.
+- Deploy your app.
+
+> **Note**: We will be linking into the Docker Cloud documentation here; be sure to come back to this page after completing each step.
+
+#### Connect Docker Cloud
+You can run Docker Cloud in [standard mode](https://docs.docker.com/docker-cloud/infrastructure/) or in [Swarm mode](https://docs.docker.com/docker-cloud/cloud-swarm/).
+
+If you are running Docker Cloud in standard mode, follow instructions below to link your service provider to Docker Cloud.
+- [Amazon Web Services setup guide](https://docs.docker.com/docker-cloud/cloud-swarm/link-aws-swarm/)
+- [DigitalOcean setup guide](https://docs.docker.com/docker-cloud/infrastructure/link-do/)
+- [Microsoft Azure setup guide](https://docs.docker.com/docker-cloud/infrastructure/link-azure/)
+- [Packet setup guide](https://docs.docker.com/docker-cloud/infrastructure/link-softlayer/)
+- [SoftLayer setup guide](https://docs.docker.com/docker-cloud/infrastructure/link-softlayer/)
+- [Use the Docker Cloud Agent to bring your own host](https://docs.docker.com/docker-cloud/infrastructure/byoh/)
+
+If you are running in Swarm mode (recommended for Amazon Web Services or Microsoft Azure), then skip to the next section on how to [create your swarm](https://docs.docker.com/get-started/part6/#create-your-swarm).
+
+#### Create your swarm
+Ready to create a swarm?
+
+- If you’re on Amazon Web Services (AWS) you can [automatically create a swarm on AWS](https://docs.docker.com/docker-cloud/cloud-swarm/create-cloud-swarm-aws/).
+
+- If you are on Microsoft Azure, you can [automatically create a swarm on Azure](https://docs.docker.com/docker-cloud/cloud-swarm/create-cloud-swarm-azure/).
+
+- Otherwise, [create your nodes](https://docs.docker.com/docker-cloud/getting-started/your_first_node/) in the Docker Cloud UI, and run the `docker swarm init` and docker swarm join commands you learned in part 4 over [SSH via Docker Cloud](https://docs.docker.com/docker-cloud/infrastructure/ssh-into-a-node/). Finally, [enable Swarm Mode](https://docs.docker.com/docker-cloud/cloud-swarm/using-swarm-mode/) by clicking the toggle at the top of the screen, and [register the  swarm](https://docs.docker.com/docker-cloud/cloud-swarm/register-swarms/) you just created.
+
+> **Note**: If you are [Using the Docker Cloud Agent to Bring your Own Host](https://docs.docker.com/docker-cloud/infrastructure/byoh/), this provider does not support swarm mode. You can [register your own existing swarms](https://docs.docker.com/docker-cloud/cloud-swarm/register-swarms/) with Docker Cloud.
+
+#### Deploy your app on a cloud provider
+1. [Connect to your swarm via Docker Cloud](https://docs.docker.com/docker-cloud/cloud-swarm/connect-to-swarm/). There are a couple of different ways to connect:
+
+	- From the Docker Cloud web interface in Swarm mode, select Swarms at the top of the page, click the swarm you want to connect to, and copy-paste the given command into a command line terminal.
+![cloud-swarm-connect.png](https://i.imgur.com/BVtP3mW.png)
+
+ Or …
+
+	- On Docker for Mac or Docker for Windows, you can [connect to your swarms directly through the desktop app menus](https://docs.docker.com/docker-cloud/cloud-swarm/connect-to-swarm/#use-docker-for-mac-or-windows-edge-to-connect-to-swarms).
+![cloud-swarm-connect-desktop.png](https://i.imgur.com/a9fHy8B.png)
+
+ Either way, this opens a terminal whose context is your local machine, but whose Docker commands are routed up to the swarm running on your cloud service provider. You directly access both your local file system and your remote swarm, enabling pure `docker` commands.
+
+2. Run `docker stack deploy -c docker-compose.yml getstartedlab` to deploy the app on the cloud hosted swarm.
+```
+ docker stack deploy -c docker-compose.yml getstartedlab
+
+ Creating network getstartedlab_webnet
+ Creating service getstartedlab_web
+ Creating service getstartedlab_visualizer
+ Creating service getstartedlab_redis
+```
+Your app is now running on your cloud provider.
+
+##### RUN SOME SWARM COMMANDS TO VERIFY THE DEPLOYMENT
+
+You can use the swarm command line, as you’ve done already, to browse and manage the swarm. Here are some examples that should look familiar by now:
+
+- Use docker node ls to list the nodes.
+```
+  [getstartedlab] ~ $ docker node ls
+  ID                            HOSTNAME                                      STATUS              AVAILABILITY        MANAGER STATUS
+  9442yi1zie2l34lj01frj3lsn     ip-172-31-5-208.us-west-1.compute.internal    Ready               Active              
+  jr02vg153pfx6jr0j66624e8a     ip-172-31-6-237.us-west-1.compute.internal    Ready               Active              
+  thpgwmoz3qefdvfzp7d9wzfvi     ip-172-31-18-121.us-west-1.compute.internal   Ready               Active              
+  n2bsny0r2b8fey6013kwnom3m *   ip-172-31-20-217.us-west-1.compute.internal   Ready               Active              Leader
+```
+- Use `docker service ls` to list services.
+```
+[getstartedlab] ~/sandbox/getstart $ docker service ls
+ID                  NAME                       MODE                REPLICAS            IMAGE                             PORTS
+x3jyx6uukog9        dockercloud-server-proxy   global              1/1                 dockercloud/server-proxy          *:2376->2376/tcp
+ioipby1vcxzm        getstartedlab_redis        replicated          0/1                 redis:latest                      *:6379->6379/tcp
+u5cxv7ppv5o0        getstartedlab_visualizer   replicated          0/1                 dockersamples/visualizer:stable   *:8080->8080/tcp
+vy7n2piyqrtr        getstartedlab_web          replicated          5/5                 sam/getstarted:part6    *:80->80/tcp
+```
+- Use `docker service ps <service>` to view tasks for a service.
+```
+[getstartedlab] ~/sandbox/getstart $ docker service ps vy7n2piyqrtr
+ID                  NAME                  IMAGE                            NODE                                          DESIRED STATE       CURRENT STATE            ERROR               PORTS
+qrcd4a9lvjel        getstartedlab_web.1   sam/getstarted:part6   ip-172-31-5-208.us-west-1.compute.internal    Running             Running 20 seconds ago                       
+sknya8t4m51u        getstartedlab_web.2   sam/getstarted:part6   ip-172-31-6-237.us-west-1.compute.internal    Running             Running 17 seconds ago                       
+ia730lfnrslg        getstartedlab_web.3   sam/getstarted:part6   ip-172-31-20-217.us-west-1.compute.internal   Running             Running 21 seconds ago                       
+1edaa97h9u4k        getstartedlab_web.4   sam/getstarted:part6   ip-172-31-18-121.us-west-1.compute.internal   Running             Running 21 seconds ago                       
+uh64ez6ahuew        getstartedlab_web.5   sam/getstarted:part6   ip-172-31-18-121.us-west-1.compute.internal   Running             Running 22 seconds ago        
+```
+
+###### OPEN PORTS TO SERVICES ON CLOUD PROVIDER MACHINES
+
+At this point, your app is deployed as a swarm on your cloud provider servers, as evidenced by the `docker` commands you just ran. But, you still need to open ports on your cloud servers in order to:
+
+- allow communication between the `redis` service and `web` service on the worker nodes
+
+- allow inbound traffic to the `web` service on the worker nodes so that Hello World and Visualizer are accessible from a web browser.
+
+- allow inbound SSH traffic on the server that is running the `manager` (this may be already set on your cloud provider)
+
+These are the ports you need to expose for each service:
+
+Service	|	Type	|	Protocol	|	Port
+----	|	----	|	----	|	----
+web	|	HTTP	|	TCP	|	80
+visualizer	|	HTTP	|	TCP	|	8080
+redis	|	TCP	|	TCP	|	6379
+
+Methods for doing this will vary depending on your cloud provider.
+
+We’ll use Amazon Web Services (AWS) as an example.
+
+> **What about the redis service to persist data?**
+> 
+To get the `redis` service working, you need to `ssh` into the cloud server where the `manager` is running, and make a `data/` directory in `/home/docker/` before you run `docker stack deploy`. Another option is to change the data path in the `docker-stack.yml` to a pre-existing path on the `manager` server. This example does not include this step, so the `redis` service is not up in the example output.
+
+##### EXAMPLE: AWS
+
+1. Log in to the [AWS Console](https://aws.amazon.com/), go to the EC2 Dashboard, and click into your **Running Instances** to view the nodes.
+
+2. On the left menu, go to Network & Security > **Security Groups**.
+
+ You’ll see security groups related to your swarm for `getstartedlab-Manager-<xxx>`, `getstartedlab-Nodes-<xxx>`, and `getstartedlab-SwarmWide-<xxx>`.
+
+3. Select the “Node” security group for the swarm. The group name will be something like this: `getstartedlab-NodeVpcSG-9HV9SMHDZT8C`.
+
+4. Add Inbound rules for the `web`, `visualizer`, and `redis` services, setting the Type, Protocol and Port for each as shown in the [table above](https://docs.docker.com/get-started/part6/#table-of-ports), and click **Save** to apply the rules.
+
+ ![cloud-aws-web-port-open.png](https://i.imgur.com/uWjjibK.png)
+
+ > **Tip**: When you save the new rules, HTTP and TCP ports will be auto-created for both IPv4 and IPv6 style addresses.
+
+ ![cloud-aws-web-and-visualizer-ports.png](https://i.imgur.com/nbzRMlW.png)
+
+5. Go to the list of **Running Instances**, get the public DNS name for one of the workers, and paste it into the address bar of your web browser.
+
+ ![cloud-aws-running-instances.png](https://i.imgur.com/y5wbmai.png)
+
+ Just as in the previous parts of the tutorial, the Hello World app displays on port `80`, and the Visualizer displays on port `8080`.
+
+ ![cloud-app-in-browser.png](https://i.imgur.com/Zw4wLhP.png)
+
+ ![cloud-visualizer.png](https://i.imgur.com/KJbWRLJ.png)
+
+#### Iteration and cleanup
+From here you can do everything you learned about in previous parts of the tutorial.
+
+- Scale the app by changing the `docker-compose.yml` file and redeploy on-the-fly with the `docker stack deploy` command.
+
+- Change the app behavior by editing code, then rebuild, and push the new image. (To do this, follow the same steps you took earlier to [build the app](https://docs.docker.com/get-started/part2/#build-the-app) and [publish the image](https://docs.docker.com/get-started/part2/#publish-the-image)).
+
+- You can tear down the stack with `docker stack rm`. For example:
+```
+docker stack rm getstartedlab
+```
+
+Unlike the scenario where you were running the swarm on local Docker machine VMs, your swarm and any apps deployed on it will continue to run on cloud servers regardless of whether you shut down your local host.
+
+### Congratulations!
+You’ve taken a full-stack, dev-to-deploy tour of the entire Docker platform.
+
+There is much more to the Docker platform than what was covered here, but you have a good idea of the basics of containers, images, services, swarms, stacks, scaling, load-balancing, volumes, and placement constraints.
+
+Want to go deeper? Here are some resources we recommend:
+
+- [Samples](https://docs.docker.com/samples/): Our samples include multiple examples of popular software running in containers, and some good labs that teach best practices.
+- [User Guide](https://docs.docker.com/engine/userguide/): The user guide has several examples that explain networking and storage in greater depth than was covered here.
+- [Admin Guide](https://docs.docker.com/engine/admin/): Covers how to manage a Dockerized production environment.
+- [Training](https://docs.docker.com/engine/admin/): Official Docker courses that offer in-person instruction and virtual classroom environments.
+- [Blog](https://blog.docker.com/): Covers what’s going on with Docker lately.
+deploy, production, datacenter, cloud, aws, azure, provider, admin, enterprise
